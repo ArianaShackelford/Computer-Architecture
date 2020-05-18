@@ -1,5 +1,6 @@
 """CPU functionality."""
 
+
 import sys
 
 class CPU:
