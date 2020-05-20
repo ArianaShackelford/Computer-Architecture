@@ -3,12 +3,17 @@
 
 import sys
 
+HLT = 0b00000001
+LDI = 0b10000010
+PRN = 0b01000111
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.register = [0] * 8
+        self.ram = [0] * 256
+        self.PC = 0
 
     def load(self):
         """Load a program into memory."""
@@ -61,6 +66,43 @@ class CPU:
 
         print()
 
+    def ram_read(self, MAR):
+        return self.ram[MAR]
+
+    def ram_write(self, MAR, MDR):
+        self.ram[MAR] = MDR
+       
+
     def run(self):
         """Run the CPU."""
-        pass
+       
+
+
+        running = True
+
+        while running: 
+
+            instruction = self.ram[self.PC] #instruction is the address of the location of the program counter in memory
+
+            operand_a = self.ram_read(self.PC + 1)
+            operand_b = self.ram_read(self.PC + 2)
+
+            # print(instruction)
+
+            if instruction == HLT:
+                running = False
+                self.PC += 1
+            
+            if instruction == LDI:
+                self.register[operand_a] = operand_b
+                self.PC += 3 
+
+            if instruction == PRN:
+                print(self.register[operand_a])
+                self.PC += 2
+
+            else: 
+                print(f'unknown instruction: {instruction}')
+
+
+        
