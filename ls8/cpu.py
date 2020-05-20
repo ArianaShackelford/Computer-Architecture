@@ -6,6 +6,9 @@ import sys
 HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
+MUL = 0b10100010
+
+
 class CPU:
     """Main CPU class."""
 
@@ -14,28 +17,32 @@ class CPU:
         self.register = [0] * 8
         self.ram = [0] * 256
         self.PC = 0
+        
 
-    def load(self):
+    def load(self, program):
         """Load a program into memory."""
 
         address = 0
+        try:
 
-        # For now, we've just hardcoded a program:
+            with open(sys.argv[1]) as program:
+                for line in program:
+                    string_split = line.split('#')
+                    string_value = string_split[0].strip()
+                    if string_value == '':
+                        continue
+                    integer = int(string_value, 2)
+                    self.ram[address] = integer
+                    address += 1
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+        except FileExistsError:
+            print('File not found')
+            sys.exit(1)
+           
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
 
+
+    
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -43,6 +50,8 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
+        elif op == MUL:
+            self.register[reg_a] *= self.register[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -93,13 +102,17 @@ class CPU:
                 running = False
                 self.PC += 1
             
-            if instruction == LDI:
+            elif instruction == LDI:
                 self.register[operand_a] = operand_b
                 self.PC += 3 
 
-            if instruction == PRN:
+            elif instruction == PRN:
                 print(self.register[operand_a])
                 self.PC += 2
+
+            elif instruction == MUL:
+                self.alu(instruction, operand_a, operand_b)
+                self.PC += 3
 
             else: 
                 print(f'unknown instruction: {instruction}')
