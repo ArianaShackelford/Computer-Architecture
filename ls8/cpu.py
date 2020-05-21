@@ -7,6 +7,8 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+POP = 0b01000110
+PUSH = 0b01000101
 
 
 class CPU:
@@ -17,6 +19,8 @@ class CPU:
         self.register = [0] * 8
         self.ram = [0] * 256
         self.PC = 0
+        self.sp = 7
+        self.register[self.sp] = 0xF4
         
 
     def load(self, program):
@@ -114,6 +118,21 @@ class CPU:
                 self.alu(instruction, operand_a, operand_b)
                 self.PC += 3
 
+            elif instruction == PUSH:
+                #decrememt sp
+                self.register[self.sp] -= 1
+                #copy the value in the given register to the address pointed to by sp
+                self.ram[self.register[self.sp]] = self.register[operand_a]
+                self.PC += 2
+
+            elif instruction == POP:
+                pass
+                #copy the value from the address pointed to by sp to the given register
+                value = self.ram[self.register[self.sp]]
+                self.register[operand_a] = value
+                #incrament sp
+                self.register[self.sp] += 1
+                self.PC += 2
             else: 
                 print(f'unknown instruction: {instruction}')
 
