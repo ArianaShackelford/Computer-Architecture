@@ -9,7 +9,8 @@ PRN = 0b01000111
 MUL = 0b10100010
 POP = 0b01000110
 PUSH = 0b01000101
-
+CALL = 0b01010000
+RET = 0b00010001
 
 class CPU:
     """Main CPU class."""
@@ -21,7 +22,19 @@ class CPU:
         self.PC = 0
         self.sp = 7
         self.register[self.sp] = 0xF4
+        self.running = False
         
+        self.branchtable = {}
+        self.branchtable[HLT] = self.handle_HLT
+        self.branchtable[LDI] = self.handle_LDI
+        self.branchtable[PRN] = self.handle_PRN
+        self.branchtable[MUL] = self.handle_MUL
+        self.branchtable[POP] = self.handle_POP
+        self.branchtable[PUSH] = self.handle_PUSH
+        self.branchtable[CALL] = self.handle_CALL
+        self.branchtable[RET] = self.handle_RET
+        
+
 
     def load(self, program):
         """Load a program into memory."""
@@ -85,56 +98,76 @@ class CPU:
     def ram_write(self, MAR, MDR):
         self.ram[MAR] = MDR
        
+    def handle_HLT(self, *argv):
+        self.running = False
+        self.PC += 1
+        
+
+    def handle_LDI(self, *argv):
+        self.register[argv[0]] = argv[1]
+        self.PC += 3 
+
+    def handle_PRN(self, *argv):
+        print(self.register[argv[0]])
+        self.PC += 2
+
+    def handle_MUL(self, *argv):
+        self.alu(instruction, argv[0], argv[1])
+        self.PC += 3
+
+    def handle_PUSH(self, *argv):
+        #decrememt sp
+        self.register[self.sp] -= 1
+        #copy the value in the given register to the address pointed to by sp
+        self.ram[self.register[self.sp]] = self.register[argv[0]]
+        self.PC += 2
+
+    def handle_POP(self, *argv):
+        #copy the value from the address pointed to by sp to the given register
+        value = self.ram[self.register[self.sp]]
+        self.register[argv[0]] = value
+        #incrament sp
+        self.register[self.sp] += 1
+        self.PC += 2
+
+    def handle_CALL(self, *argv):
+
+        return_address = argv[1]
+        self.register[self.sp] -= 1
+        top = self.register[self.sp]
+        self.ram[top] = return_address
+
+        # self.handle_PUSH(return_address)
+
+        reg_num = self.ram[argv[0]]
+        sub_address = self.register[reg_num]
+
+        self.PC = sub_address
+
+
+    def handle_RET(self, *argv):
+        
+        top = self.register[self.sp]
+        return_address = self.ram[top]
+        self.register[self.sp] += 1
+
+        self.PC = return_address
+
 
     def run(self):
         """Run the CPU."""
-       
-
-
-        running = True
-
-        while running: 
-
-            instruction = self.ram[self.PC] #instruction is the address of the location of the program counter in memory
-
+        
+        self.running = True
+        while self.running:
+            instruction = self.ram[self.PC]
             operand_a = self.ram_read(self.PC + 1)
             operand_b = self.ram_read(self.PC + 2)
 
-            # print(instruction)
-
-            if instruction == HLT:
-                running = False
-                self.PC += 1
-            
-            elif instruction == LDI:
-                self.register[operand_a] = operand_b
-                self.PC += 3 
-
-            elif instruction == PRN:
-                print(self.register[operand_a])
-                self.PC += 2
-
-            elif instruction == MUL:
-                self.alu(instruction, operand_a, operand_b)
-                self.PC += 3
-
-            elif instruction == PUSH:
-                #decrememt sp
-                self.register[self.sp] -= 1
-                #copy the value in the given register to the address pointed to by sp
-                self.ram[self.register[self.sp]] = self.register[operand_a]
-                self.PC += 2
-
-            elif instruction == POP:
-                pass
-                #copy the value from the address pointed to by sp to the given register
-                value = self.ram[self.register[self.sp]]
-                self.register[operand_a] = value
-                #incrament sp
-                self.register[self.sp] += 1
-                self.PC += 2
+            if instruction in self.branchtable:
+                self.branchtable[instruction](operand_a, operand_b)  
             else: 
                 print(f'unknown instruction: {instruction}')
+                sys.exit(1)
 
 
         
