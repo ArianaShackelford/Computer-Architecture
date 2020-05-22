@@ -11,7 +11,10 @@ POP = 0b01000110
 PUSH = 0b01000101
 CALL = 0b01010000
 RET = 0b00010001
-
+CMP = 0b10100111
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
 class CPU:
     """Main CPU class."""
 
@@ -19,10 +22,16 @@ class CPU:
         """Construct a new CPU."""
         self.register = [0] * 8
         self.ram = [0] * 256
+        self.flag = [0] * 8
         self.PC = 0
         self.sp = 7
         self.register[self.sp] = 0xF4
         self.running = False
+
+        self.L = self.flag[5]
+        self.G = self.flag[6]
+        self.E = self.flag[7]
+        
         
         self.branchtable = {}
         self.branchtable[HLT] = self.handle_HLT
@@ -33,6 +42,10 @@ class CPU:
         self.branchtable[PUSH] = self.handle_PUSH
         self.branchtable[CALL] = self.handle_CALL
         self.branchtable[RET] = self.handle_RET
+        self.branchtable[CMP] = self.handle_CMP
+        self.branchtable[JMP] = self.handle_JMP
+        self.branchtable[JEQ] = self.handle_JEQ
+        self.branchtable[JNE] = self.handle_JNE
         
 
 
@@ -69,6 +82,16 @@ class CPU:
         #elif op == "SUB": etc
         elif op == MUL:
             self.register[reg_a] *= self.register[reg_b]
+        
+        elif op == CMP:
+            if self.register[reg_a] > self.register[reg_b]:
+                self.G = 1 
+            elif self.register[reg_a] < self.register[reg_b]:
+                self.L = 1
+            elif self.register[reg_b] == self.register[reg_a]:
+                self.E = 1
+            else:
+                self.G, self.L, self.E = 0
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -115,6 +138,14 @@ class CPU:
         self.alu(instruction, argv[0], argv[1])
         self.PC += 3
 
+    def handle_CMP(self, *argv):
+        instruction = self.ram[self.PC]
+        opr_a = self.ram_read(self.PC + 1)
+        opr_b = self.ram_read(self.PC + 2)
+
+        self.alu(instruction, opr_a, opr_b)
+        self.PC += 3
+
     def handle_PUSH(self, *argv):
         #decrememt sp
         self.register[self.sp] -= 1
@@ -153,6 +184,23 @@ class CPU:
 
         self.PC = return_address
 
+    def handle_JMP(self, *argv):
+        self.sp = argv[0]
+        self.PC = self.register[self.sp]
+    
+    def handle_JEQ(self, *argv):
+        if self.E == 1:
+            self.sp = argv[0]
+            self.PC = self.register[self.sp]
+        else:
+            pass
+
+    def handle_JNE(self, *argv):
+        if self.E == 0:
+            self.sp = argv[0]
+            self.PC = self.register[self.sp]
+        else:
+            pass
 
     def run(self):
         """Run the CPU."""
